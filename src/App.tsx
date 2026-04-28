@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Users, Target, TrendingUp, Award, BookOpen, Heart } from 'lucide-react';
+import { Users, Target, TrendingUp, BookOpen, Heart, LogIn } from 'lucide-react';
 import dvLogo from './assets/dvlogo.png';
+import { LoginModal } from './components/LoginModal';
+import { CustomizationPage } from './components/CustomizationPage';
 
 const genderData = [
   { name: 'Boys', participation: 65 },
@@ -27,28 +29,10 @@ function GADCorner() {
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [photoSlide, setPhotoSlide] = useState(0);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  useEffect(() => {
-    setTimeout(() => setLoading(false), 1000);
-  }, []);
-
-  // Auto-play for programs carousel
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
-    }, 4000); // Change slide every 4 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  // Auto-play for photo carousel
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPhotoSlide((prev) => (prev + 1) % photoSlides.length);
-    }, 3000); // Change slide every 3 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  const carouselSlides = [
+  const [carouselSlides, setCarouselSlides] = useState([
     {
       title: "Gender Equality Workshop",
       description: "Interactive session on gender stereotypes and equality in education",
@@ -73,9 +57,9 @@ function GADCorner() {
       date: "May 5, 2024",
       participants: "300+ students"
     }
-  ];
+  ]);
 
-  const photoSlides = [
+  const [photoSlides, setPhotoSlides] = useState([
     {
       image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=400&fit=crop",
       title: "Student Workshop",
@@ -96,7 +80,41 @@ function GADCorner() {
       title: "Community Outreach",
       caption: "Reaching out to promote inclusivity"
     }
-  ];
+  ]);
+
+  useEffect(() => {
+    setTimeout(() => setLoading(false), 1000);
+  }, []);
+
+  // Auto-play for programs carousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
+    }, 4000); // Change slide every 4 seconds
+    return () => clearInterval(interval);
+  }, [carouselSlides.length]);
+
+  // Auto-play for photo carousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPhotoSlide((prev) => (prev + 1) % photoSlides.length);
+    }, 3000); // Change slide every 3 seconds
+    return () => clearInterval(interval);
+  }, [photoSlides.length]);
+
+  const handleLoginSuccess = () => {
+    setIsAdmin(true);
+    setIsLoginModalOpen(false);
+  };
+
+  const handleLogout = () => {
+    setIsAdmin(false);
+  };
+
+  const handleUpdateSlides = (newPhotoSlides: typeof photoSlides, newCarouselSlides: typeof carouselSlides) => {
+    setPhotoSlides(newPhotoSlides);
+    setCarouselSlides(newCarouselSlides);
+  };
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
@@ -114,8 +132,27 @@ function GADCorner() {
     setPhotoSlide((prev) => (prev - 1 + photoSlides.length) % photoSlides.length);
   };
 
+  // If user is logged in, show customization page
+  if (isAdmin) {
+    return (
+      <CustomizationPage
+        photoSlides={photoSlides}
+        carouselSlides={carouselSlides}
+        onLogout={handleLogout}
+        onUpdate={handleUpdateSlides}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white text-gray-900">
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
       {/* Sticky Header - Purple Main with Orange Highlight */}
       <header className="sticky top-0 z-10 bg-gradient-to-r from-purple-700 via-purple-600 to-purple-700 border-b-4 border-orange-500 p-4 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -126,7 +163,14 @@ function GADCorner() {
             </h1>
             <p className="text-sm text-purple-100 mt-1">Gender and Development Dashboard</p>
           </div>
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setIsLoginModalOpen(true)}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-800 text-white px-4 py-2 rounded-lg font-semibold transition-all border-2 border-purple-400 hover:border-orange-500"
+            >
+              <LogIn className="w-5 h-5" />
+              <span className="hidden sm:inline">Login</span>
+            </button>
             <div className="text-right">
               <p className="text-sm font-semibold text-white">Department of Education</p>
               <p className="text-xs text-purple-100">Gender & Development</p>
@@ -337,7 +381,7 @@ function GADCorner() {
                   cy={125}
                   outerRadius={80}
                   dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent = 0 }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 >
                   {diversityData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
